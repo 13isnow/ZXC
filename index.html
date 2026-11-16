@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="AIGC图片检测系统交互式演示" />
+    <title>AIGC图片检测系统</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <div class="brand-mark" aria-hidden="true">◈</div>
+          <div>
+            <h1>AIGC图片检测系统</h1>
+          </div>
+        </div>
+        <div class="topbar-meta">
+          <span class="status-dot"></span>
+          <span>演示环境</span>
+        </div>
+      </header>
+
+      <main>
+        <section class="intro-row">
+          <div>
+            <h2>上传一张图片，查看全图判断与局部信号</h2>
+            <p class="intro-copy">图片标准化后先计算全图分数，再逐块检测并显示区域分数。</p>
+          </div>
+          <div class="pipeline" aria-label="处理流程">
+            <span class="pipeline-step"><b>01</b> 上传</span><i></i>
+            <span class="pipeline-step"><b>02</b> 标准化</span><i></i>
+            <span class="pipeline-step"><b>03</b> 检测</span><i></i>
+            <span class="pipeline-step"><b>04</b> 分块分析</span>
+          </div>
+        </section>
+
+        <section class="workspace-grid">
+          <aside class="control-panel">
+            <div class="panel-heading">
+              <div><span class="panel-index">A</span><h3>输入图片</h3></div>
+              <span class="live-label">LIVE</span>
+            </div>
+            <label class="dropzone" id="dropzone" for="file-input">
+              <input id="file-input" type="file" accept="image/png,image/jpeg,image/webp" />
+              <span class="upload-icon" aria-hidden="true">↑</span>
+              <strong>拖入图片，或点击上传</strong>
+              <small>PNG / JPG / WEBP · 建议小于 10 MB</small>
+            </label>
+            <div class="sample-label"><span>演示样例</span><span>已选 <b id="sample-name">AI 生成 · 汤碗</b></span></div>
+            <div class="sample-list" id="sample-list">
+              <button class="sample-chip selected" data-src="./assets/AI生成_01_餐桌汤碗.png" data-label="AI 生成 · 汤碗"><img src="./assets/AI生成_01_餐桌汤碗.png" alt="AI生成汤碗" /><span>AI · 汤碗</span></button>
+              <button class="sample-chip" data-src="./assets/真实_01_办公桌.jpg" data-label="真实图片 · 办公桌"><img src="./assets/真实_01_办公桌.jpg" alt="真实办公桌" /><span>真实 · 办公桌</span></button>
+              <button class="sample-chip" data-src="./assets/AI生成_02_草地上的狗.png" data-label="AI 生成 · 草地"><img src="./assets/AI生成_02_草地上的狗.png" alt="AI生成草地上的狗" /><span>AI · 草地</span></button>
+              <button class="sample-chip" data-src="./assets/真实_02_湖泊风景.png" data-label="真实图片 · 湖泊"><img src="./assets/真实_02_湖泊风景.png" alt="真实湖泊风景" /><span>真实 · 湖泊</span></button>
+            </div>
+            <div class="processing-note"><span><b>输入预览</b><br />支持压缩、裁剪与缩放</span></div>
+          </aside>
+
+          <section class="analysis-panel">
+            <div class="panel-heading">
+              <div><span class="panel-index">B</span><h3>检测结果</h3></div>
+              <span class="analysis-state" id="analysis-state">尚未推理</span>
+            </div>
+            <div class="result-layout">
+              <div class="image-stage">
+                <div class="stage-toolbar"><span id="view-label">原始预览</span><button type="button" class="icon-button" id="toggle-heatmap" aria-pressed="true" aria-label="显示或隐藏区域裁剪分数">热力图 <span class="toggle-pill on"></span></button></div>
+                <div class="image-canvas-wrap" id="image-wrap">
+                  <canvas id="image-canvas" aria-label="待检测图片预览"></canvas>
+                  <canvas id="heatmap-canvas" aria-label="区域裁剪模型分数"></canvas>
+                  <div class="scan-line" id="scan-line"></div>
+                  <div class="empty-image" id="empty-image"><span>◌</span><p>选择一张图片开始分析</p></div>
+                </div>
+                <div class="stage-caption"><span><i class="legend-dot low"></i>低分数</span><span><i class="legend-dot mid"></i>中等分数</span><span><i class="legend-dot high"></i>高分数</span><span class="caption-note">颜色表示裁剪块的独立分类分数</span></div>
+              </div>
+              <div class="score-column" aria-live="polite">
+                <div class="verdict-label">模型判断</div>
+                <div class="verdict" id="verdict">尚未推理</div>
+                <div class="score-ring" id="score-ring"><div><strong id="score-value">—</strong><small>模型分数</small></div></div>
+                <p class="score-description" id="score-description">等待模型检测。</p>
+                <div class="score-meta"><span>阈值 <b>0.50</b></span><span>耗时 <b id="latency">—</b></span></div>
+                <div class="confidence-bar"><span id="confidence-bar-fill"></span></div>
+                <div class="standardized-row"><div><b>图片尺寸</b><small id="dimensions">输入尺寸适配到 256 × 256</small></div></div>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section class="stress-section">
+          <div class="section-heading-row"><div><p class="section-kicker">鲁棒性观察</p><h2>压力测试</h2><p>选择处理条件，实时观察同一张图片在退化后的输入与检测结果。</p></div></div>
+          <div class="stress-grid">
+            <div class="stress-controls">
+              <div class="control-group"><label for="jpeg-range">JPEG 压缩 <output id="jpeg-output">100</output></label><input id="jpeg-range" class="range" type="range" min="30" max="100" step="10" value="100" /><div class="range-labels"><span>强</span><span>无</span></div></div>
+              <div class="control-group"><label for="crop-select">裁剪保留</label><select id="crop-select" class="select"><option value="1">不裁剪</option><option value="0.75">75% 面积</option><option value="0.5">50% 面积</option><option value="0.25">25% 面积</option></select></div>
+              <div class="control-group"><label for="scale-select">缩放到</label><select id="scale-select" class="select"><option value="1">原始尺寸</option><option value="0.75">75% 边长</option><option value="0.5">50% 边长</option><option value="0.25">25% 边长</option></select></div>
+              <div class="control-group"><label for="combo-select">组合干扰</label><select id="combo-select" class="select"><option value="none">无组合</option><option value="light">轻组合 · crop75 → scale50 → JPEG70</option><option value="heavy">重组合 · crop50 → scale25 → JPEG50</option></select></div>
+              <button class="reset-button" type="button" id="reset-stress">↺ 恢复原始输入</button>
+            </div>
+            <div class="stress-readout"><div class="readout-head"><span>实时对比</span></div><div class="readout-items"><div><small>当前模型分数</small><strong id="stress-score">—</strong><span>/ 100</span></div><div><small>相对原始输入</small><strong id="stress-delta">—</strong><span>百分点</span></div><div><small>输入视图</small><strong id="stress-size">原图</strong></div></div><div class="stress-footnote">压力测试复用同一张演示图片；改变的是输入视图，不是标签。</div></div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+    <script src="./config.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

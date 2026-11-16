@@ -1,0 +1,48 @@
+name: Deploy website to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ['**', '!README.md']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Configure local model API URL
+        env:
+          API_BASE_URL: ${{ vars.AIGC_API_BASE_URL }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          url = os.environ.get('API_BASE_URL', '').rstrip('/')
+          if url and not url.startswith('https://'):
+              raise SystemExit('AIGC_API_BASE_URL must use HTTPS')
+          Path('config.js').write_text(
+              'window.AIGC_CONFIG = { apiBaseUrl: ' + json.dumps(url) + ' };\n',
+              encoding='utf-8',
+          )
+          PY
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
