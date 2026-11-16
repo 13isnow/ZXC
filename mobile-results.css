@@ -1,0 +1,23 @@
+@media (max-width: 720px) {
+  .workspace-grid {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .analysis-panel {
+    order: -1;
+  }
+
+  .result-layout {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .score-column {
+    order: -1;
+    margin: 0 0 18px;
+    padding: 0 0 18px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+  }
+}
